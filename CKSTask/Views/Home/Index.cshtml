@@ -1,0 +1,170 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+@Html.Hidden("hdnUserDetailID")
+
+<div class="row">
+    <div style="padding-top:15px;">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                User Details
+            </div>
+            <div class="panel-body">
+                <div class="table-responsive" style="margin-top:12px;">
+                    <div class="col-sm-12 col-md-12 col-lg-12">
+                        <table id="tblUserDetail" class="table table-striped table-bordered" width="100%">
+                            <thead>
+                                <tr class="table-head">
+                                    <th>Action</th>
+                                    <th>Name</th>
+                                    <th>DOB</th>
+                                    <th>Gender</th>
+                                    <th>Mobile</th>
+                                    <th>Password</th>
+                                </tr>
+                            </thead>
+
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalUserDeleteConfirmationPopup" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">Delete Confirmation</h5>
+            </div>
+            <div class="modal-body">
+                <span>Do you really want to delete?</span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btndelete" class="btn btn-success" onclick="DeleteUser();">Yes</button>
+                <button type="button" data-dismiss="modal" class="btn btn-warning">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var tblUserDetail_Datatable;
+    $(document).ready(function () {
+        Initdatatable();
+        GetUserDetails();
+       // alert(1);
+    });
+
+    function Initdatatable() {
+        tblUserDetail_Datatable = $('#tblUserDetail').DataTable({
+            "paging": true,
+            "autoWidth": true,
+            "pageLength": 10,
+            "lengthChange": true,
+        });
+    }
+
+    function GetUserDetails() {
+        $.ajax({
+            type: "POST",
+            url: "/Home/GetUserDetails",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: OnSuccess_GetUserDetails,
+            failure: function (response) {
+                console.log(response.responseText);
+            },
+            error: function (response) {
+                AmagiLoader.hide();
+                console.log(response.statusText);
+            }
+        });
+    }
+
+    function OnSuccess_GetUserDetails(response) {
+        var dd = response.lstUserDetails.UserDetailID;
+        var btn = '<button class="btn-xs btn-warning btnEditUser">Edit</button> <button class="btn-xs btn-danger btnUserDelete">Delete</button> <button class="btn-xs btn-success btnUserView">View</button>'
+        tblUserDetail_Datatable.destroy();
+        tblUserDetail_Datatable = $('#tblUserDetail').DataTable(
+            {
+                bLengthChange: false,
+                bFilter: false,
+                bSort: true,
+                bPaginate: true,
+                pageLength: 5,
+                autoWidth: false,
+                data: response.lstUserDetails,
+                columns: [
+                    { 'data': null, "defaultContent": btn },
+                    { 'data': 'Name' },
+                    {
+                        'data': 'DOB',
+                        "render": function (data, type, row, meta) {
+                            return '<span>' + moment(row.DOB).format("MM/DD/yyyy") + '</span><input type="hidden" class="clsUserDetailID" value="' + row.UserDetailID + '" style="display:none"/>';
+                        }
+                    },
+                    { 'data': 'Gender' },
+                    { 'data': 'Mobile' },
+
+                    { 'data': 'Email' },
+
+                ]
+            });
+
+    };
+
+
+    $("#tblUserDetail").on('click', '.btnEditUser', function () {
+
+        // get the current row
+        var currentRow = $(this).closest("tr");
+        var txtUserDetailID = currentRow.find(".clsUserDetailID").val();
+        window.location = '@Url.Action("Edit", "Home")?ID=' + txtUserDetailID;
+    });
+
+    $("#tblUserDetail").on('click', '.btnUserView', function () {
+        // get the current row
+        var currentRow = $(this).closest("tr");
+        var txtUserDetailID = currentRow.find(".clsUserDetailID").val();
+        window.location = '@Url.Action("Details", "Home")?ID=' + txtUserDetailID;
+      });
+
+    $("#tblUserDetail").on('click', '.btnUserDelete', function () {
+        // get the current row
+        var currentRow = $(this).closest("tr");
+        var txtUserDetailID = currentRow.find(".clsUserDetailID").val();
+        $("#hdnUserDetailID").val(txtUserDetailID);
+        $("#modalUserDeleteConfirmationPopup").modal('show');
+    });
+
+    function DeleteUser() {
+        var txtUserDetailID =  $("#hdnUserDetailID").val();
+        $.ajax({
+            type: "POST",
+            url: "/Home/DeleteUserDetails",
+            data: "{'UserDetailID':'" + txtUserDetailID + "'}",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (response) {
+                if (response.message == "Success") {
+                    swal({
+                        title: "Success",
+                        text: "User deleted successfully",
+                        icon: "success",
+                    }).then(function () {
+                        location.reload();
+                    });
+                }
+            },
+            failure: function (response) {
+                console.log(response.responseText);
+            },
+            error: function (response) {
+                console.log(response.statusText);
+            }
+        });
+    }
+
+</script>
